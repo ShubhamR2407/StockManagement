@@ -3,11 +3,18 @@ package com.assignment.StockManagementSystem.User.Service;
 import com.assignment.StockManagementSystem.User.Dto.RegisterDto;
 import com.assignment.StockManagementSystem.User.Repository.Modals.User;
 import com.assignment.StockManagementSystem.User.Repository.UserRepository;
+import com.assignment.StockManagementSystem.config.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -15,27 +22,29 @@ public class UserService {
     @Autowired
     UserRepository userRepository;
 
-    public User addUser(RegisterDto userDto) {
-        User user = new User();
-        user.setName(userDto.getName());
-        user.setEmail(userDto.getEmail());
-        user.setNumber(userDto.getNumber());
-        user.setAadharNumber(userDto.getAadharNumber());
-        user.setPassword(userDto.getPassword());
+    @Autowired
+    JwtServiceImpl jwtService;
 
-        return userRepository.save(user);
-    }
+    public UserDetailsService userDetailsService() {
+        return new UserDetailsService() {
+            @Override
+            public UserDetails loadUserByUsername(String username) {
+                User user =  userRepository.findByName(username);
+                if(user == null)
+                    throw new UsernameNotFoundException("User not found");
 
-    public ResponseEntity<String> loginUser(String name, String password) {
-        User user = userRepository.findByName(name);
-        System.out.println(user);
-        if (user == null) {
-            return new ResponseEntity<>("User does not exist", HttpStatus.NOT_FOUND);
-        } else if (!user.getPassword().equals(password)) {
-            return new ResponseEntity<>("Invalid Credentials", HttpStatus.UNAUTHORIZED);
-        } else {
-            return new ResponseEntity<>(name, HttpStatus.OK);
-        }
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                if(user.isAdmin()){
+                    authorities.add(new SimpleGrantedAuthority(Role.ROLE_ADMIN.name()));
+                } else if(user.isCompany()){
+                    authorities.add(new SimpleGrantedAuthority(Role.ROLE_COMPANY.name()));
+                }else{
+                    authorities.add(new SimpleGrantedAuthority(Role.ROLE_USER.name()));
+                }
+                return new org.springframework.security.core.userdetails.User(
+                        user.getName(),user.getPassword(), authorities);
+            }
+        };
     }
 
 //    public ResponseEntity<String> loginUser(String name, String password) {

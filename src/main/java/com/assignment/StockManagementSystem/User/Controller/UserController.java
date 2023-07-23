@@ -3,11 +3,15 @@ package com.assignment.StockManagementSystem.User.Controller;
 import com.assignment.StockManagementSystem.User.Dto.LoginDto;
 import com.assignment.StockManagementSystem.User.Dto.RegisterDto;
 import com.assignment.StockManagementSystem.User.Repository.Modals.User;
+import com.assignment.StockManagementSystem.User.Service.AuthenticationServiceImpl;
 import com.assignment.StockManagementSystem.User.Service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,10 +24,13 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private AuthenticationServiceImpl authenticationService;
+
     @PostMapping("/save")
     public ResponseEntity<User> createUser(@Valid @RequestBody RegisterDto userDto) {
         try {
-            User createdUser = userService.addUser(userDto);
+            User createdUser = authenticationService.saveUser(userDto);
             return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
         } catch(Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -45,6 +52,7 @@ public class UserController {
     }
 
     @GetMapping("/{name}")
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     public ResponseEntity<User> getUser(@PathVariable String name) {
         try {
             User user = userService.getUser(name);
@@ -57,7 +65,7 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<String> loginUser(@RequestBody LoginDto loginDto) {
         try {
-            ResponseEntity<String> response = userService.loginUser(loginDto.getName(), loginDto.getPassword());
+            ResponseEntity<String> response = authenticationService.login(loginDto.getName(), loginDto.getPassword());
             return response;
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
