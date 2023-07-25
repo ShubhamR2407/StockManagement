@@ -27,7 +27,8 @@ public class Stock {
     @Column
     private Date expDate;
 
-    public Stock(String name, String symbol, String type, Double currentPrice, Date expDate) {
+    public Stock(Long stockId, String name, String symbol, String type, Double currentPrice, Date expDate) {
+        this.stockId = stockId;
         this.name = name;
         this.symbol = symbol;
         this.type = type;
@@ -36,6 +37,14 @@ public class Stock {
     }
 
     public Stock() {
+    }
+
+    public Long getStockId() {
+        return stockId;
+    }
+
+    public void setStockId(Long stockId) {
+        this.stockId = stockId;
     }
 
     public String getName() {

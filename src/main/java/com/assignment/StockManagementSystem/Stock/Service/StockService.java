@@ -1,4 +1,4 @@
-package com.assignment.StockManagementSystem.Stock.Dto.Service;
+package com.assignment.StockManagementSystem.Stock.Service;
 
 import com.assignment.StockManagementSystem.Stock.Dto.StockDto;
 import com.assignment.StockManagementSystem.Stock.Repository.Modals.Stock;
@@ -60,4 +60,5 @@ public class StockService {
         List<Stock> stockList = stockRepository.findAll();
         return stockList;
     }
+
 }

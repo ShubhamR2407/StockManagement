@@ -2,7 +2,7 @@ package com.assignment.StockManagementSystem.Stock.Controller;
 
 import com.assignment.StockManagementSystem.Stock.Dto.StockDto;
 import com.assignment.StockManagementSystem.Stock.Repository.Modals.Stock;
-import com.assignment.StockManagementSystem.Stock.Dto.Service.StockService;
+import com.assignment.StockManagementSystem.Stock.Service.StockService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

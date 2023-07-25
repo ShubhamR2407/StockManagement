@@ -1,8 +1,9 @@
 package com.assignment.StockManagementSystem.User.Service;
 
-import com.assignment.StockManagementSystem.User.Dto.RegisterDto;
+import com.assignment.StockManagementSystem.User.Dto.UpdateUserDto;
 import com.assignment.StockManagementSystem.User.Repository.Modals.User;
 import com.assignment.StockManagementSystem.User.Repository.UserRepository;
+import com.assignment.StockManagementSystem.User.Repository.UserStockRepository;
 import com.assignment.StockManagementSystem.config.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,7 +12,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -25,11 +25,12 @@ public class UserService {
     @Autowired
     JwtServiceImpl jwtService;
 
+
     public UserDetailsService userDetailsService() {
         return new UserDetailsService() {
             @Override
-            public UserDetails loadUserByUsername(String username) {
-                User user =  userRepository.findByName(username);
+            public UserDetails loadUserByUsername(String name) {
+                User user =  userRepository.findByIdOrName(null,name);
                 if(user == null)
                     throw new UsernameNotFoundException("User not found");
 
@@ -47,63 +48,26 @@ public class UserService {
         };
     }
 
-//    public ResponseEntity<String> loginUser(String name, String password) {
-//        User user = userRepository.findByName(name);
-//        System.out.println(user);
-//        if (user == null) {
-//            return new ResponseEntity<>("User does not exist", HttpStatus.NOT_FOUND);
-//        } else if (!user.getPassword().equals(password)) {
-//            return new ResponseEntity<>("Invalid Credentials", HttpStatus.UNAUTHORIZED);
-//        } else {
-//            // User login successful, generate and return a JWT
-//            System.out.println("1");
-////            String accessToken = generateAccessToken(name, user.getEmail());
-//            return new ResponseEntity<>(user, HttpStatus.OK);
-//        }
-//    }
-//    public static final long JWT_TOKEN_VALIDITY = 5 * 60 * 60;
-//    private String secret = "afafasfafafasfasfasfafacasdasfasxASFACASDFACASDFASFASFDAFASFASDAADSCSDFADCVSGCFVADXCcadwavfsfarvf";
-
-//    private String generateAccessToken(String name, String email) {
-//        Date expirationTime = new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000);
-//        System.out.println("2");
-//        Map<String, Object> claims = new HashMap<>();
-//        claims.put("name", name);
-//        claims.put("email", email);
-//        System.out.println("3");
-//        byte[] secretKeyBytes = secret.getBytes(StandardCharsets.UTF_8);
-//        SecretKey key = new SecretKeySpec(secretKeyBytes, SignatureAlgorithm.HS512.getJcaName());
-//        System.out.println("4");
-//        String accessToken = Jwts.builder()
-//                .setClaims(claims)
-//                .setExpiration(expirationTime)
-//                .signWith(key, SignatureAlgorithm.HS512) // Use HS512 algorithm
-//                .compact();
-//        System.out.println("5");
-//        return accessToken;
-//    }
-
-    public User updateUser(String name, RegisterDto userDto) {
-        User user = userRepository.findByName((name));
+    public User updateUser(String name, UpdateUserDto updateUserDto) {
+        User user = userRepository.findByIdOrName(null,name);
 
         if(user == null) {
             return null;
         }
-        user.setEmail(userDto.getEmail());
-        user.setNumber(userDto.getNumber());
-        user.setAadharNumber(userDto.getAadharNumber());
-//        user.setPassword(userDto.getPassword());
+        user.setEmail(updateUserDto.getEmail());
+        user.setNumber(updateUserDto.getNumber());
+        user.setAadharNumber(updateUserDto.getAadharNumber());
         return userRepository.save(user);
     }
 
     public ResponseEntity<String> deleteUser(String name) {
-        User user = userRepository.findByName(name);
+        User user = userRepository.findByIdOrName(null,name);
 
         if(user==null) {
             return new ResponseEntity<>("User not found",HttpStatus.NOT_FOUND);
         } else {
             userRepository.delete(user);
-            return new ResponseEntity<>("User deleted Successfullt", HttpStatus.OK);
+            return new ResponseEntity<>("User deleted Successfully", HttpStatus.OK);
         }
     }
 
@@ -112,13 +76,19 @@ public class UserService {
         return userList;
     }
 
-    public User getUser(String name) {
-        User user = userRepository.findByName(name);
-
+    public User getUserByTokenOrName(String tokenOrName) {
+        User user = new User();
+        if(tokenOrName.length() > 20 ) {
+            String name = jwtService.extractUserName(tokenOrName);
+            user = userRepository.findByIdOrName(null,name);
+        } else {
+            user = userRepository.findByIdOrName(null,tokenOrName);
+        }
         if(user == null) {
             return null;
         } else {
             return user;
         }
     }
+
 }

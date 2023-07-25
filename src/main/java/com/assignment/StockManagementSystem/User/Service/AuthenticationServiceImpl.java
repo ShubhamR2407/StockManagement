@@ -1,5 +1,6 @@
 package com.assignment.StockManagementSystem.User.Service;
 
+import com.assignment.StockManagementSystem.Exceptions.DuplicateUserException;
 import com.assignment.StockManagementSystem.User.Dto.RegisterDto;
 import com.assignment.StockManagementSystem.User.Repository.Modals.User;
 import com.assignment.StockManagementSystem.User.Repository.UserRepository;
@@ -22,22 +23,33 @@ public class AuthenticationServiceImpl {
     private final JwtServiceImpl jwtService;
     private final AuthenticationManager authenticationManager;
 
-    public User saveUser(RegisterDto userDto) {
+    public User saveUser(RegisterDto registerDto) {
+        // Check for duplicate user here (e.g., by email, Aadhar number, or name)
+        boolean emailExists = userRepository.existsByEmail(registerDto.getEmail());
+        boolean aadharNumberExists = userRepository.existsByAadharNumber(registerDto.getAadharNumber());
+        boolean nameExists = userRepository.existsByName(registerDto.getName());
+
+        if (emailExists || aadharNumberExists || nameExists) {
+            throw new DuplicateUserException("User with the same email, Aadhar number, or name already exists.");
+        }
+
+        // Continue with user creation if no duplicate is found
         User user = new User();
-        user.setName(userDto.getName());
-        user.setEmail(userDto.getEmail());
-        user.setNumber(userDto.getNumber());
-        user.setAadharNumber(userDto.getAadharNumber());
-        user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        user.setName(registerDto.getName());
+        user.setEmail(registerDto.getEmail());
+        user.setNumber(registerDto.getNumber());
+        user.setAadharNumber(registerDto.getAadharNumber());
+        user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
         return userRepository.save(user);
     }
+
 
     public ResponseEntity<String> login(String name, String password) {
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(name, password));
 
-        User user = userRepository.findByName(name);
+        User user = userRepository.findByIdOrName(null,name);
         System.out.println(user);
         UserDetails userDetails =  new org.springframework.security.core.userdetails.User(
         user.getName(),user.getPassword(), new ArrayList<>());

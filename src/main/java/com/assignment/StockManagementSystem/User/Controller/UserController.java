@@ -1,17 +1,19 @@
 package com.assignment.StockManagementSystem.User.Controller;
 
+import com.assignment.StockManagementSystem.Exceptions.DuplicateUserException;
+import com.assignment.StockManagementSystem.Stock.Repository.Modals.Stock;
 import com.assignment.StockManagementSystem.User.Dto.LoginDto;
 import com.assignment.StockManagementSystem.User.Dto.RegisterDto;
+import com.assignment.StockManagementSystem.User.Dto.UpdateUserDto;
 import com.assignment.StockManagementSystem.User.Repository.Modals.User;
+import com.assignment.StockManagementSystem.User.Repository.Modals.UserStock;
 import com.assignment.StockManagementSystem.User.Service.AuthenticationServiceImpl;
 import com.assignment.StockManagementSystem.User.Service.UserService;
+import com.assignment.StockManagementSystem.User.Service.UserStockService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,12 +29,52 @@ public class UserController {
     @Autowired
     private AuthenticationServiceImpl authenticationService;
 
+    @Autowired
+    private UserStockService userStockService;
+
     @PostMapping("/save")
-    public ResponseEntity<User> createUser(@Valid @RequestBody RegisterDto userDto) {
+    public ResponseEntity<?> registerUser(@RequestBody RegisterDto userDto) {
         try {
-            User createdUser = authenticationService.saveUser(userDto);
-            return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
-        } catch(Exception e) {
+            User savedUser = authenticationService.saveUser(userDto);
+            // Return a success response or whatever is applicable for successful registration.
+            return ResponseEntity.ok(savedUser);
+        } catch (DuplicateUserException ex) {
+            // Return an error response with a meaningful message to inform the user about the duplicate user.
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (Exception ex) {
+            // Return a generic error response for other unexpected exceptions.
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred.");
+        }
+    }
+
+    @PostMapping("/buy")
+    public ResponseEntity<Stock> buyStock(@RequestParam Long userId, @RequestParam Long stockId) {
+        try {
+            Stock stock = userStockService.buyStock(userId, stockId);
+
+            return new ResponseEntity<>(stock, HttpStatus.CREATED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping("/sell")
+    public ResponseEntity<String> sellStock(@RequestParam Long userId, @RequestParam Long stockId) {
+        try {
+            userStockService.sellStock(userId, stockId);
+
+            return new ResponseEntity<>("Stock removed successfully", HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/{name}")
+    public ResponseEntity<User> getUserByName(@PathVariable String name) {
+        try {
+            User user = userService.getUserByTokenOrName(name);
+            return new ResponseEntity<>(user, HttpStatus.OK);
+        } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -51,13 +93,36 @@ public class UserController {
         }
     }
 
-    @GetMapping("/{name}")
-    @PreAuthorize("hasAuthority('ROLE_USER')")
-    public ResponseEntity<User> getUser(@PathVariable String name) {
+    @GetMapping("/profile")
+//    @PreAuthorize("hasAuthority('ROLE_USER')")
+    public ResponseEntity<User> getUser(@RequestHeader("Authorization") String token) {
         try {
-            User user = userService.getUser(name);
+            String jwtToken = token.substring(7);
+            User user = userService.getUserByTokenOrName(jwtToken);
             return new ResponseEntity<>(user, HttpStatus.OK);
         }catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+//    @GetMapping("/admin/profile")
+//    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+//    public ResponseEntity<User> getAdmin(@RequestHeader("Authorization") String token) {
+//        try {
+//            String jwtToken = token.substring(7);
+//            User user = userService.getUserByTokenOrName(jwtToken);
+//            return new ResponseEntity<>(user, HttpStatus.OK);
+//        }catch (Exception e) {
+//            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+//        }
+//    }
+
+    @GetMapping("/stocks/{userId}")
+    public ResponseEntity<List<Stock>> getStockByUserId(@PathVariable Long userId) {
+        try {
+            List<Stock> stocksList = userStockService.getAllStockByUserId(userId);
+            return new ResponseEntity<>(stocksList, HttpStatus.OK);
+        } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -73,9 +138,9 @@ public class UserController {
     }
 
     @PutMapping("/{name}")
-    public ResponseEntity<User> updateUser(@PathVariable String name,@Valid @RequestBody RegisterDto userDto) {
+    public ResponseEntity<User> updateUser(@PathVariable String name,@Valid @RequestBody UpdateUserDto updateUserDto) {
         try {
-            User updatedUser = userService.updateUser(name, userDto);
+            User updatedUser = userService.updateUser(name, updateUserDto);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
         } catch(Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
